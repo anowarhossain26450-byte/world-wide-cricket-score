@@ -1,0 +1,23 @@
+WORLD WIDE CRICKET SCORE — Android থেকে প্রকাশের নির্দেশনা
+
+এই প্যাকেজে আছে:
+- index.html, style.css, app.js
+- Firebase configuration (আপনার আগের দেওয়া Project config)
+- database.rules.json (Public read, শুধু অনুমোদিত Admin write)
+- firebase.json
+
+গুরুত্বপূর্ণ নিরাপত্তা:
+1) Firebase Console > Authentication > Sign-in method থেকে Email/Password চালু করুন।
+2) Authentication > Users থেকে প্রথম Admin-এর Email/Password account তৈরি করুন।
+3) Realtime Database > Rules-এ database.rules.json-এর নিয়মগুলো বসিয়ে Publish করুন।
+4) প্রথম Admin অনুমোদন দিতে Realtime Database > Data-তে admins নামে node তৈরি করুন, তার নিচে প্রথম Admin-এর UID নামে child, value true দিন। উদাহরণ: admins / FIRST_ADMIN_UID / true.
+5) ওয়েবসাইটে Admin Login করে নতুন Admin-দের Firebase Authentication-এ account তৈরি করান। তারা লগইন করে UID দেখবে। অনুমোদিত Admin Control Panel-এ UID বসিয়ে Admin অনুমতি দিতে পারবেন।
+6) কোনো Admin সরাতে Realtime Database Data-তে admins/UID value false করুন বা child মুছে দিন।
+
+স্কোরিং:
+- Dot, 1,2,3,4,6, Wide, No-ball, Wicket, Undo, Match finish.
+- Overs count: Wide/No-ball-এ legal ball বাড়ে না।
+- এটি প্রাথমিক স্কোরবোর্ড; পূর্ণ batter/bowler scorecard, innings switch, toss, DLS ইত্যাদি এখনো যোগ করা হয়নি।
+
+প্রকাশ:
+এই ZIP-এর ফাইলগুলো GitHub repository-তে upload করে Firebase Hosting-এর GitHub integration/Cloud Build অথবা Firebase CLI দিয়ে deploy করতে হবে। Hosting site তৈরি থাকলেও deploy না করলে “Waiting for your first release” দেখাবে।

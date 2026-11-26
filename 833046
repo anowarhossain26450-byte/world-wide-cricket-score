@@ -1,0 +1,130 @@
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+const $ = id => document.getElementById(id);
+let currentUser = null, isAdmin = false, matchesCache = {};
+
+const safe = value => String(value ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const oversText = balls => `${Math.floor((balls || 0)/6)}.${(balls || 0)%6}`;
+const total = m => (m.runs || 0);
+const dateText = t => new Date(t || Date.now()).toLocaleString('bn-BD');
+
+$("loginToggle").onclick = () => $("loginPanel").classList.toggle("hidden");
+$("loginForm").addEventListener("submit", async e => {
+  e.preventDefault(); $("authMessage").textContent = "লগইন হচ্ছে…";
+  try { await auth.signInWithEmailAndPassword($("email").value.trim(), $("password").value); }
+  catch(err) { $("authMessage").textContent = friendly(err); }
+});
+$("logoutBtn").onclick = () => auth.signOut();
+function friendly(err) {
+  const map = {"auth/invalid-credential":"ইমেইল বা পাসওয়ার্ড সঠিক নয়।","auth/too-many-requests":"অনেকবার চেষ্টা হয়েছে, পরে আবার চেষ্টা করুন.","auth/operation-not-allowed":"Firebase Authentication-এ Email/Password চালু করুন."};
+  return map[err.code] || err.message;
+}
+
+auth.onAuthStateChanged(async user => {
+  currentUser = user;
+  $("logoutBtn").classList.toggle("hidden", !user);
+  $("uidBox").classList.toggle("hidden", !user);
+  $("adminPanel").classList.add("hidden");
+  if (!user) {
+    isAdmin = false;
+    $("authMessage").textContent = "দর্শক হিসেবে স্কোর দেখতে লগইন প্রয়োজন নেই।";
+    $("loginToggle").textContent = "Admin Login";
+    return;
+  }
+  $("uidBox").textContent = "আপনার Admin UID: " + user.uid + " (কপি করে নিরাপদে রাখুন)";
+  try {
+    const snap = await db.ref("admins/" + user.uid).once("value");
+    isAdmin = snap.val() === true;
+    $("adminPanel").classList.toggle("hidden", !isAdmin);
+    $("adminStatus").textContent = isAdmin ? "Admin অনুমোদিত — আপনি স্কোর আপডেট করতে পারবেন।" : "এই account এখনো Admin হিসেবে অনুমোদিত নয়। Project owner-কে আপনার UID দিতে হবে।";
+    $("loginToggle").textContent = isAdmin ? "Admin Panel" : "Account";
+    if (!isAdmin) $("authMessage").textContent = "লগইন হয়েছে, কিন্তু Admin অনুমতি নেই।";
+    else $("authMessage").textContent = "সফলভাবে Admin হিসেবে লগইন হয়েছে।";
+  } catch(err) { $("authMessage").textContent = "ডাটাবেস অনুমতি পরীক্ষা করা যায়নি: " + err.message; }
+});
+
+$("matchForm").addEventListener("submit", async e => {
+  e.preventDefault(); if (!isAdmin) return;
+  const ref = db.ref("matches").push();
+  const data = {
+    teamA: $("teamA").value.trim(), teamB: $("teamB").value.trim(),
+    venue: $("venue").value.trim(), maxOvers: Math.max(1, Number($("maxOvers").value)||20),
+    runs: 0, wickets: 0, balls: 0, extras: 0, recent: [],
+    status: "LIVE", createdAt: firebase.database.ServerValue.TIMESTAMP,
+    updatedAt: firebase.database.ServerValue.TIMESTAMP
+  };
+  try { await ref.set(data); $("matchForm").reset(); $("maxOvers").value=20; }
+  catch(err) { alert("ম্যাচ তৈরি হয়নি: " + err.message); }
+});
+
+$("adminForm").addEventListener("submit", async e => {
+  e.preventDefault(); if (!isAdmin) return;
+  const uid = $("newAdminUid").value.trim();
+  if (!uid || uid === currentUser.uid) { $("adminMessage").textContent = "অন্য Admin-এর সঠিক UID দিন।"; return; }
+  try {
+    await db.ref("admins/" + uid).set(true);
+    $("adminMessage").textContent = "Admin অনুমোদন দেওয়া হয়েছে।";
+    $("newAdminUid").value = "";
+  } catch(err) { $("adminMessage").textContent = "অনুমতি দেওয়া যায়নি: " + err.message; }
+});
+
+function scoreButtons(id) {
+  if (!isAdmin) return "";
+  return `<div class="scoring"><span>স্কোর আপডেট</span>
+    ${[0,1,2,3,4,6].map(n=>`<button data-match="${id}" data-kind="run" data-value="${n}">${n===0?'ডট':n}</button>`).join("")}
+    <button class="extra" data-match="${id}" data-kind="wide">Wide +1</button>
+    <button class="extra" data-match="${id}" data-kind="noball">No-ball +1</button>
+    <button class="wicket" data-match="${id}" data-kind="wicket">Wicket</button>
+    <button class="outline" data-match="${id}" data-kind="undo">Undo</button>
+    <button class="outline" data-match="${id}" data-kind="finish">ম্যাচ শেষ</button>
+  </div>`;
+}
+function renderMatches(data) {
+  matchesCache = data || {};
+  const entries = Object.entries(matchesCache).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+  if (!entries.length) { $("matches").innerHTML = '<div class="empty">এখনো কোনো ম্যাচ তৈরি হয়নি। Admin লগইন করে প্রথম ম্যাচ তৈরি করুন।</div>'; return; }
+  $("matches").innerHTML = entries.map(([id,m]) => `
+    <article class="match-card">
+      <div class="match-meta"><span class="${m.status==='LIVE'?'live-pill':'done-pill'}">${safe(m.status||'LIVE')}</span><span>${safe(m.venue||'ভেন্যু উল্লেখ নেই')}</span></div>
+      <div class="teams"><div><b>${safe(m.teamA)}</b><small>Team 1</small></div><div class="versus">VS</div><div><b>${safe(m.teamB)}</b><small>Team 2</small></div></div>
+      <div class="scoreline"><strong>${total(m)}/${m.wickets||0}</strong><span>(${oversText(m.balls)} overs)</span></div>
+      <div class="score-extra">Extras: ${m.extras||0} · নির্ধারিত ওভার: ${m.maxOvers||20}</div>
+      <div class="recent"><b>শেষ বল:</b> ${(m.recent||[]).slice(-12).reverse().map(safe).join(" · ") || "—"}</div>
+      ${scoreButtons(id)}
+      <small class="updated">আপডেট: ${dateText(m.updatedAt)}</small>
+    </article>`).join("");
+}
+db.ref("matches").on("value", snap => renderMatches(snap.val()), err => {
+  $("matches").innerHTML = '<div class="empty">স্কোর লোড হয়নি। Firebase Database Rules পরীক্ষা করুন: '+safe(err.message)+'</div>';
+});
+
+$("matches").addEventListener("click", async e => {
+  const b = e.target.closest("button[data-match]"); if (!b || !isAdmin) return;
+  const id=b.dataset.match, kind=b.dataset.kind, m=matchesCache[id]; if (!m) return;
+  const ref=db.ref("matches/"+id);
+  try {
+    if (kind === "finish") { await ref.update({status:"COMPLETED", updatedAt:firebase.database.ServerValue.TIMESTAMP}); return; }
+    if (kind === "undo") {
+      const history=m.history||[];
+      if (!history.length) { alert("Undo করার মতো আগের বল নেই।"); return; }
+      const previous=history[history.length-1];
+      await ref.set({...previous, history:history.slice(0,-1), updatedAt:firebase.database.ServerValue.TIMESTAMP});
+      return;
+    }
+    if (m.status === "COMPLETED") { alert("ম্যাচ শেষ।"); return; }
+    const old={...m};
+    delete old.history;
+    const history=[...(m.history||[]), old].slice(-30);
+    let runs=m.runs||0, wickets=m.wickets||0, balls=m.balls||0, extras=m.extras||0;
+    let label="", legal=true;
+    if (kind==="run") { const n=Number(b.dataset.value); runs+=n; label=String(n); }
+    if (kind==="wide") { runs+=1; extras+=1; legal=false; label="Wd"; }
+    if (kind==="noball") { runs+=1; extras+=1; legal=false; label="Nb"; }
+    if (kind==="wicket") { wickets+=1; label="W"; }
+    if (legal) balls+=1;
+    const maxBalls=(m.maxOvers||20)*6;
+    const status=(wickets>=10 || balls>=maxBalls) ? "COMPLETED" : "LIVE";
+    await ref.update({runs,wickets,balls,extras,recent:[...(m.recent||[]),label].slice(-20),history,status,updatedAt:firebase.database.ServerValue.TIMESTAMP});
+  } catch(err) { alert("আপডেট হয়নি: "+err.message); }
+});

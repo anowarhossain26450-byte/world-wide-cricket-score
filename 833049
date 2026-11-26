@@ -1,0 +1,12 @@
+// Firebase Web App configuration for World Wide Cricket Score.
+// These values identify your Firebase project. Never put passwords or private keys here.
+const firebaseConfig = {
+  apiKey: "AIzaSyAiUdYuWQ04MOezbgzDCxkdnveEM-4_-aI",
+  authDomain: "world-wide-cricket-score.firebaseapp.com",
+  databaseURL: "https://world-wide-cricket-score-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "world-wide-cricket-score",
+  storageBucket: "world-wide-cricket-score.firebasestorage.app",
+  messagingSenderId: "374050508984",
+  appId: "1:374050508984:web:2fb577dabecf9589e8644d",
+  measurementId: "G-HNDCN8401E"
+};

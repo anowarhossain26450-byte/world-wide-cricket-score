@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123d2b">
+  <title>World Wide Cricket Score</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="ball">●</span><div><b>WORLD WIDE</b><small>CRICKET SCORE</small></div></div>
+  <button id="loginToggle" class="outline">Admin Login</button>
+</header>
+<main class="wrap">
+  <section class="hero">
+    <p class="eyebrow">LIVE CRICKET • EVERYWHERE</p>
+    <h1>World Wide Cricket Score</h1>
+    <p>লাইভ স্কোর দেখুন, ম্যাচ অনুসরণ করুন।</p>
+  </section>
+
+  <section id="loginPanel" class="panel hidden">
+    <h2>Admin Login</h2>
+    <p class="muted">শুধু অনুমোদিত Admin স্কোর আপডেট করতে পারবেন।</p>
+    <form id="loginForm">
+      <label>ইমেইল<input id="email" type="email" required autocomplete="username" placeholder="admin@example.com"></label>
+      <label>পাসওয়ার্ড<input id="password" type="password" required autocomplete="current-password" placeholder="পাসওয়ার্ড"></label>
+      <div class="actions"><button type="submit">Login</button><button type="button" id="logoutBtn" class="outline hidden">Logout</button></div>
+    </form>
+    <p id="authMessage" class="notice"></p>
+    <p id="uidBox" class="uid hidden"></p>
+  </section>
+
+  <section id="adminPanel" class="panel hidden">
+    <h2>Admin Control Panel</h2>
+    <div class="subpanel">
+      <h3>নতুন ম্যাচ তৈরি</h3>
+      <form id="matchForm" class="two">
+        <label>প্রথম দলের নাম<input id="teamA" required placeholder="যেমন: Bangladesh"></label>
+        <label>দ্বিতীয় দলের নাম<input id="teamB" required placeholder="যেমন: India"></label>
+        <label>ভেন্যু<input id="venue" placeholder="মাঠের নাম"></label>
+        <label>ওভার সীমা<input id="maxOvers" type="number" min="1" max="100" value="20"></label>
+        <button type="submit">ম্যাচ তৈরি করুন</button>
+      </form>
+    </div>
+    <div class="subpanel">
+      <h3>একাধিক Admin যোগ করুন</h3>
+      <p class="muted">নতুন Admin-কে আগে Firebase Authentication → Users থেকে Email/Password দিয়ে account তৈরি করতে হবে। তারপর তার UID এখানে যোগ করুন।</p>
+      <form id="adminForm" class="two">
+        <label>নতুন Admin-এর UID<input id="newAdminUid" required placeholder="Firebase Authentication UID"></label>
+        <button type="submit">Admin অনুমোদন দিন</button>
+      </form>
+      <p id="adminMessage" class="notice"></p>
+    </div>
+    <p id="adminStatus" class="notice"></p>
+  </section>
+
+  <section class="section-head"><div><p class="eyebrow">MATCH CENTRE</p><h2>লাইভ ও সাম্প্রতিক ম্যাচ</h2></div><span class="live-dot">LIVE</span></section>
+  <div id="matches" class="matches"><div class="empty">স্কোর লোড হচ্ছে…</div></div>
+</main>
+<footer>World Wide Cricket Score · Public live scoreboard</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
